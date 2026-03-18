@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const db = require('./db');
 const { setBlockUser, isTokenValid } = require('./services/openvpn');
-const { autoLogin } = require('./index.js')
+const { autoLogin } = require('./index')
 /**
  * Checks for expired users and blocks them.
  */
