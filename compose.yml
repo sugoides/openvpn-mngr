@@ -6,5 +6,5 @@ services:
     env_file:
       - .env
     volumes:
-      - /home/DATA/AppData/openvpn-mngr:/usr/src
+      - /home/DATA/AppData/openvpn-mngr:/usr/src/app/data
     restart: unless-stopped

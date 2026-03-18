@@ -1,6 +1,6 @@
 # Use an official Node.js runtime as a parent image
 FROM node:18-alpine
-
+RUN apk add --no-cache bash
 # Set the working directory in the container
 WORKDIR /usr/src/app
 

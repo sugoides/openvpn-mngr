@@ -1,6 +1,6 @@
 const Database = require('better-sqlite3');
 // Connect to the database, creating the file if it doesn't exist
-const db = new Database('vpn_access_v2.db');
+const db = new Database('data/vpn_access_v2.db');
 
 /**
  * Initializes the database schema.
