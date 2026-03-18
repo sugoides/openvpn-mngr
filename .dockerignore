@@ -1,0 +1,14 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+node_modules
+
+# Documentation
+README.md
+GEMINI.md
+
+# Environment variables
+.env
+*.log
