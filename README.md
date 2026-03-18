@@ -20,28 +20,6 @@ This tool provides a simple admin panel for granting, extending, and revoking VP
 - **Database**: SQLite
 - **Libraries**: `axios`, `node-cron`, `dotenv`, `better-sqlite3`, `cors`
 
-## Project Structure
-
-```
-openvpn-access-manager/
-|-- server/
-|   |-- middleware/auth.js
-|   |-- routes/
-|   |   |-- auth.js
-|   |   `-- users.js
-|   |-- services/openvpn.js
-|   |-- db.js
-|   |-- index.js
-|   `-- scheduler.js
-|-- public/
-|   |-- app.js
-|   |-- styles.css
-|   |-- login.html
-|   `-- dashboard.html
-|-- .env.example
-|-- package.json
-`-- README.md
-```
 
 ## Installation & Setup
 
