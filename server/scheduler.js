@@ -1,16 +1,11 @@
 const cron = require('node-cron');
 const db = require('./db');
-const { setBlockUser, isTokenValid } = require('./services/openvpn');
+const { setBlockUser } = require('./services/openvpn');
 /**
  * Checks for expired users and blocks them.
  */
 async function checkAndBlockExpiredUsers() {
   console.log('Running expiration check...');
-
-  if (!isTokenValid()) {
-      console.log('OpenVPN token is not valid.');
-      return;
-  }
 
   const stmt = db.prepare("SELECT * FROM vpn_users WHERE status = 'active' AND datetime(expiration_date) <= datetime('now')");
   const expiredUsers = stmt.all();

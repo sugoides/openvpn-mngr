@@ -1,4 +1,18 @@
 require('dotenv').config();
+require('log-timestamp')(() => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  return `[${formatter.format(now)}]`;
+});
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');

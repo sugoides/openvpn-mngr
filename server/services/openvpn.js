@@ -55,12 +55,18 @@ function isTokenValid() {
 
 /**
  * Executes a request with the current auth token.
+ * If the token is invalid, it attempts an automatic login if credentials are provided in .env.
  * @param {Function} requestFn - A function that receives the axios client and token and executes a request.
  * @returns {Promise<any>}
  */
 async function makeAuthenticatedRequest(requestFn) {
   if (!isTokenValid()) {
-    throw new Error('OpenVPN auth token is missing or expired.');
+    if (process.env.OPENVPN_USERNAME && process.env.OPENVPN_PASSWORD) {
+      console.log('OpenVPN auth token is missing or expired. Attempting automatic login...');
+      await login(process.env.OPENVPN_USERNAME, process.env.OPENVPN_PASSWORD);
+    } else {
+      throw new Error('OpenVPN auth token is missing or expired and no credentials provided for auto-login.');
+    }
   }
   return requestFn(openvpnApiClient, authToken);
 }
