@@ -30,28 +30,4 @@ jobs:
           -t ${{ secrets.DOCKER_USER }}/openvpn-mngr:latest \
           --push .
 
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@v0.1.6
-      with:
-        host: ${{ secrets.SERVER_IP }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SSH_KEY }} # Private key from SERVER_USER
-        script: |
-
-          echo ${{ secrets.DOCKER_PWD }} | sudo docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
-
-          # Stop and remove the existing container if it exists
-          sudo docker stop openvpn-mngr || true
-          sudo docker rm openvpn-mngr || true
-
-          # Pull the latest image from Docker Hub
-          sudo docker pull sugoi13/openvpn-mngr:latest
-
-          # remove existing image
-          sudo docker images sugoi13/openvpn-mngr --format '{{.ID}}' | grep -v "$(sudo docker images sugoi13/gamerole:latest --format '{{.ID}}')" | xargs -r sudo docker rmi --force
-
-          
-          sudo docker run -d -e DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }} -e MONGODB_PWD=${{ secrets.MONGODB_PWD }} --name gamerole sugoi13/gamerole
-
-
 
