@@ -1,7 +1,10 @@
 services:
-  app:
+  openvpn-mngr:
     image: sugoi13/openvpn-mngr
     ports:
       - "3000:3000"
     env_file:
       - .env
+    volumes:
+      - /home/DATA/AppData/openvpn-mngr:/usr/src
+    restart: unless-stopped
