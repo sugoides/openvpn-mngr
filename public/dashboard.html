@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - OpenVPN Access Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        .modal {
+            display: none;
+        }
+        .modal.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-8">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">OpenVPN Access Manager</h1>
+                <p class="text-gray-600">Grant, extend, and manage temporary VPN access.</p>
+            </div>
+            <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow">
+                Logout
+            </button>
+        </header>
+
+        <div id="alert-container" class="fixed top-5 right-5 z-50"></div>
+
+        <main class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-700">User Dashboard</h2>
+                <button id="grant-access-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow">
+                    Grant Access
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                        <tr>
+                            <th class="py-3 px-6 text-left">Username</th>
+                            <th class="py-3 px-6 text-left">Status</th>
+                            <th class="py-3 px-6 text-center">Expiration</th>
+                            <th class="py-3 px-6 text-center">Time Remaining</th>
+                            <th class="py-3 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body" class="text-gray-600 text-sm font-light">
+                        <!-- User rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                 <div id="loading-spinner" class="hidden text-center p-4">
+                    <p>Loading users...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Grant Access Modal -->
+    <div id="grant-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full justify-center items-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Grant VPN Access</h2>
+            <form id="grant-form">
+                <div class="mb-4">
+                    <label for="grant-username" class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                    <input type="text" id="grant-username" name="username" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="mb-6">
+                    <label for="grant-expiration" class="block text-gray-700 text-sm font-bold mb-2">Expiration Date & Time</label>
+                    <input type="datetime-local" id="grant-expiration" name="expiration_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="button" class="modal-cancel-btn bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+                        Grant Access
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Extend Access Modal -->
+    <div id="extend-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full justify-center items-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Extend VPN Access</h2>
+            <form id="extend-form">
+                <input type="hidden" id="extend-username" name="username">
+                <div class="mb-4">
+                    <p class="text-gray-700">Extend access for <strong id="extend-username-display"></strong></p>
+                </div>
+                <div class="mb-6">
+                    <label for="extend-expiration" class="block text-gray-700 text-sm font-bold mb-2">New Expiration Date & Time</label>
+                    <input type="datetime-local" id="extend-expiration" name="expiration_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="button" class="modal-cancel-btn bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">
+                        Extend Access
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+
+    <!-- Confirm Action Modal -->
+    <div id="confirm-action-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full justify-center items-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 id="confirm-modal-title" class="text-2xl font-bold mb-6 text-gray-800"></h2>
+            <p id="confirm-modal-body" class="text-gray-700 mb-6"></p>
+            <div class="flex items-center justify-end">
+                <button type="button" class="modal-cancel-btn bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2">
+                    Cancel
+                </button>
+                <button id="confirm-modal-confirm-btn" type="button" class="font-bold py-2 px-4 rounded-lg">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
