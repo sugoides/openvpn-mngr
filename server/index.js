@@ -72,3 +72,6 @@ async function autoLogin() {
     startScheduler();
   });
 })();
+
+
+module.exports = { autoLogin };
