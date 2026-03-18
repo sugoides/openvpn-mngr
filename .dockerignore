@@ -12,3 +12,6 @@ GEMINI.md
 # Environment variables
 .env
 *.log
+
+
+compose.yml
