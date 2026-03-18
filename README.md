@@ -1,4 +1,4 @@
-# OpenVPN Temporary Access Manager (V2 - Token Auth)
+# OpenVPN Access Manager
 
 A production-ready web application for managing temporary OpenVPN user access using secure, token-based authentication.
 
