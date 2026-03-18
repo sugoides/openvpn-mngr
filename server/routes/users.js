@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { setBlockUser, getUsersFromProfiles } = require('../services/openvpn');
+const { scheduleUserBlocking, cancelUserBlocking } = require('../scheduler');
 
 // GET /api/users - Get all users
 router.get('/', async (req, res) => {
@@ -60,6 +61,9 @@ router.post('/grant', async (req, res) => {
       user = stmt.get(username, 'active', expiration_date);
     }
 
+    // Schedule the block job
+    scheduleUserBlocking(username, expiration_date);
+
     res.status(201).json(user);
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to grant access.' });
@@ -83,6 +87,9 @@ router.post('/extend', async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    // Reschedule the block job
+    scheduleUserBlocking(username, expiration_date);
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to extend access.' });
@@ -98,6 +105,9 @@ router.post('/block', async (req, res) => {
 
   try {
     await setBlockUser(username, true); // Block user
+
+    // Cancel any scheduled block job
+    cancelUserBlocking(username);
 
     const stmt = db.prepare("UPDATE vpn_users SET status = 'blocked' WHERE username = ?");
     const result = stmt.run(username);
@@ -122,6 +132,9 @@ router.post('/unblock', async (req, res) => {
 
   try {
     await setBlockUser(username, false); // Unblock user
+
+    // Cancel any scheduled block job (though there shouldn't be one if it was blocked)
+    cancelUserBlocking(username);
 
     const stmt = db.prepare("UPDATE vpn_users SET status = 'active' WHERE username = ?");
     const result = stmt.run(username);

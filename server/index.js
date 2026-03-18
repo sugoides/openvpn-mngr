@@ -21,7 +21,7 @@ const db = require('./db'); // This initializes the database
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const { isAuthenticated } = require('./middleware/auth');
-const { startScheduler } = require('./scheduler');
+const { initScheduler } = require('./scheduler');
 const { login, isTokenValid } = require('./services/openvpn');
 const { syncUsers } = require('./usersync');
 
@@ -83,7 +83,7 @@ async function autoLogin() {
     console.log(`Server is running on http://localhost:${PORT}`);
     
     // Start the scheduler
-    startScheduler();
+    initScheduler();
   });
 })();
 
