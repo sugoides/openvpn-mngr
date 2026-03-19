@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, logout } = require('../services/openvpn');
-const { syncUsers } = require('../usersync');
+const { login } = require('../services/openvpn');
 
 // POST /api/login
 router.post('/login', async (req, res) => {
@@ -12,10 +11,10 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    await login(username, password);
+    const creds = await login(username, password);
     req.session.isAuthenticated = true;
-
-    await syncUsers();
+    req.session.openvpnToken = creds.authToken;
+    req.session.openvpnTokenExpiresAt = creds.tokenExpiresAt;
 
     res.status(200).json({ message: 'Login successful.' });
   } catch (error) {
@@ -26,7 +25,6 @@ router.post('/login', async (req, res) => {
 
 // POST /api/logout
 router.post('/logout', (req, res) => {
-  logout(); // Clear the OpenVPN token
   req.session.destroy(err => {
     if (err) {
       return res.status(500).json({ error: 'Could not log out, please try again.' });

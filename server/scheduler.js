@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const db = require('./db');
-const { setBlockUser } = require('./services/openvpn');
+const { setBlockUser, getSystemToken } = require('./services/openvpn');
 
 // In-memory storage for scheduled jobs
 const scheduledJobs = new Map();
@@ -12,7 +12,8 @@ const scheduledJobs = new Map();
 async function blockUserAction(username) {
   console.log(`[Scheduler] User ${username} has expired. Blocking...`);
   try {
-    await setBlockUser(username, true);
+    const token = await getSystemToken();
+    await setBlockUser(username, true, token);
     const updateStmt = db.prepare("UPDATE vpn_users SET status = 'blocked' WHERE username = ?");
     updateStmt.run(username);
     console.log(`[Scheduler] User ${username} has been marked as blocked (due to expiration).`);

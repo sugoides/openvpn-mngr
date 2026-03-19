@@ -1,20 +1,19 @@
 const axios = require('axios');
-const { response } = require('express');
 require('dotenv').config();
 
-// In-memory storage for the auth token
-let authToken = null;
-let tokenExpiresAt = null;
+// In-memory storage for the SYSTEM auth token (used by scheduler)
+let systemToken = null;
+let systemTokenExpiresAt = null;
 
 const openvpnApiClient = axios.create({
   baseURL: process.env.OPENVPN_API_URL,
 });
 
 /**
- * Logs into the OpenVPN server and stores the auth token.
+ * Logs into the OpenVPN server and returns the auth token and expiry.
  * @param {string} username - The admin username.
  * @param {string} password - The admin password.
- * @returns {Promise<void>}
+ * @returns {Promise<{authToken: string, tokenExpiresAt: Date}>}
  */
 async function login(username, password) {
   try {
@@ -24,98 +23,85 @@ async function login(username, password) {
       request_admin: true,
     });
 
-    authToken = response.data.auth_token;
-    tokenExpiresAt = new Date(response.data.expires_after);
-
-    console.log('Successfully logged into OpenVPN. Token expires at:', tokenExpiresAt);
+    return {
+      authToken: response.data.auth_token,
+      tokenExpiresAt: new Date(response.data.expires_after)
+    };
   } catch (error) {
     console.error('OpenVPN login failed:', error.response ? error.response.data : error.message);
-    authToken = null;
-    tokenExpiresAt = null;
     throw new Error(error.response ? error.response.data.error || 'OpenVPN login failed.' : 'OpenVPN login failed.');
   }
 }
 
 /**
- * Logs out from the OpenVPN server by clearing the token.
- */
-function logout() {
-    authToken = null;
-    tokenExpiresAt = null;
-    console.log('Logged out from OpenVPN.');
-}
-
-/**
- * Checks if the current auth token is valid and not expired.
+ * Checks if a given token is valid.
+ * @param {string} token 
+ * @param {Date|string} expiresAt 
  * @returns {boolean}
  */
-function isTokenValid() {
-  return authToken && tokenExpiresAt && new Date() < tokenExpiresAt;
+function isTokenValid(token, expiresAt) {
+  return token && expiresAt && new Date() < new Date(expiresAt);
 }
 
 /**
- * Executes a request with the current auth token.
- * If the token is invalid, it attempts an automatic login if credentials are provided in .env.
- * @param {Function} requestFn - A function that receives the axios client and token and executes a request.
- * @returns {Promise<any>}
+ * Gets a valid system token, logging in if necessary.
+ * @returns {Promise<string>}
  */
-async function makeAuthenticatedRequest(requestFn) {
-  if (!isTokenValid()) {
+async function getSystemToken() {
+  if (!isTokenValid(systemToken, systemTokenExpiresAt)) {
     if (process.env.OPENVPN_USERNAME && process.env.OPENVPN_PASSWORD) {
-      console.log('OpenVPN auth token is missing or expired. Attempting automatic login...');
-      await login(process.env.OPENVPN_USERNAME, process.env.OPENVPN_PASSWORD);
+      console.log('[System] OpenVPN system token is missing or expired. Logging in...');
+      const creds = await login(process.env.OPENVPN_USERNAME, process.env.OPENVPN_PASSWORD);
+      systemToken = creds.authToken;
+      systemTokenExpiresAt = creds.tokenExpiresAt;
+      console.log('[System] Successfully refreshed system token.');
     } else {
-      throw new Error('OpenVPN auth token is missing or expired and no credentials provided for auto-login.');
+      throw new Error('No system credentials provided in .env for background tasks.');
     }
   }
-  return requestFn(openvpnApiClient, authToken);
+  return systemToken;
 }
 
 /**
  * Blocks or unblocks a user.
  * @param {string} username - The username to modify.
  * @param {boolean} block - `true` to block, `false` to unblock.
+ * @param {string} token - The auth token to use.
  * @returns {Promise<void>}
  */
-async function setBlockUser(username, block) {
-  return makeAuthenticatedRequest(async (client, token) => {
-    try {
-      await client.post('/api/userprop/set', 
-        [{ name: username, deny: block }], 
-        { headers: { 'X-OpenVPN-AS-AuthToken': token } }
-      );
-      console.log(`Successfully set user ${username} block status to ${block}`);
-    } catch (error) {
-      console.error(`Error setting block status for user ${username}:`, error.response ? error.response.data : error.message);
-      if (error.response && error.response.status === 401) {
-          logout(); // Token is invalid, so log out
-      }
-      throw new Error('Failed to set user block status on OpenVPN server.');
-    }
-  });
+async function setBlockUser(username, block, token) {
+  if (!token) throw new Error('Auth token is required for OpenVPN requests.');
+  
+  try {
+    await openvpnApiClient.post('/api/userprop/set', 
+      [{ name: username, deny: block }], 
+      { headers: { 'X-OpenVPN-AS-AuthToken': token } }
+    );
+    console.log(`Successfully set user ${username} block status to ${block}`);
+  } catch (error) {
+    console.error(`Error setting block status for user ${username}:`, error.response ? error.response.data : error.message);
+    throw new Error('Failed to set user block status on OpenVPN server.');
+  }
 }
 
 /**
  * Gets all user profiles from the OpenVPN server.
+ * @param {string} token - The auth token to use.
  * @returns {Promise<Array>}
  */
-async function getUsersFromProfiles() {
-  return makeAuthenticatedRequest(async (client, token) => {
-    try {
-      const response = await client.post('/api/users/list', 
-        { offset: 0, page_size: 1000, order_by: "name", sort_by: "asc" },
-        { headers: { 'X-OpenVPN-AS-AuthToken': token } }
-      );
-      // console.log('OpenVPN /api/users/list response:', JSON.stringify(response.data, null, 2));
-      return response.data.profiles;
-    } catch (error) {
-      console.error('Error getting profiles from OpenVPN server:', error.response ? error.response.data : error.message);
-      if (error.response && error.response.status === 401) {
-          logout(); // Token is invalid, so log out
-      }
-      throw new Error('Failed to get profiles from OpenVPN server.');
-    }
-  });
+async function getUsersFromProfiles(token) {
+  if (!token) throw new Error('Auth token is required for OpenVPN requests.');
+
+  try {
+    const response = await openvpnApiClient.post('/api/users/list', 
+      { offset: 0, page_size: 1000, order_by: "name", sort_by: "asc" },
+      { headers: { 'X-OpenVPN-AS-AuthToken': token } }
+    );
+    return response.data.profiles;
+  } catch (error) {
+    console.error('Error getting profiles from OpenVPN server:', error.response ? error.response.data : error.message);
+    throw new Error('Failed to get profiles from OpenVPN server.');
+  }
 }
 
-module.exports = { login, logout, isTokenValid, setBlockUser, makeAuthenticatedRequest, getUsersFromProfiles };
+module.exports = { login, isTokenValid, getSystemToken, setBlockUser, getUsersFromProfiles };
