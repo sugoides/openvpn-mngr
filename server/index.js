@@ -23,7 +23,6 @@ const userRoutes = require('./routes/users');
 const { isAuthenticated } = require('./middleware/auth');
 const { initScheduler } = require('./scheduler');
 const { login, isTokenValid } = require('./services/openvpn');
-const { syncUsers } = require('./usersync');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,7 +77,6 @@ async function autoLogin() {
 
 // Start the server
 (async () => {
-  await autoLogin();
   app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
     

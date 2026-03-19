@@ -8,7 +8,7 @@ const { scheduleUserBlocking, cancelUserBlocking } = require('../scheduler');
 router.get('/', async (req, res) => {
   try {
     const [vpnProfiles, localUsers] = await Promise.all([
-      getUsersFromProfiles(),
+      getUsersFromProfiles(req.session.openvpnToken),
       db.prepare('SELECT * FROM vpn_users').all()
     ]);
 
@@ -48,7 +48,7 @@ router.post('/grant', async (req, res) => {
   }
 
   try {
-    await setBlockUser(username, false); // Unblock user
+    await setBlockUser(username, false, req.session.openvpnToken); // Unblock user
 
     const existingUser = db.prepare('SELECT id FROM vpn_users WHERE username = ?').get(username);
 
@@ -78,7 +78,7 @@ router.post('/extend', async (req, res) => {
   }
 
   try {
-    await setBlockUser(username, false); // Unblock user
+    await setBlockUser(username, false, req.session.openvpnToken); // Unblock user
 
     const stmt = db.prepare('UPDATE vpn_users SET expiration_date = ?, status = ? WHERE username = ? RETURNING *');
     const user = stmt.get(expiration_date, 'active', username);
@@ -104,7 +104,7 @@ router.post('/block', async (req, res) => {
   }
 
   try {
-    await setBlockUser(username, true); // Block user
+    await setBlockUser(username, true, req.session.openvpnToken); // Block user
 
     // Cancel any scheduled block job
     cancelUserBlocking(username);
@@ -131,7 +131,7 @@ router.post('/unblock', async (req, res) => {
   }
 
   try {
-    await setBlockUser(username, false); // Unblock user
+    await setBlockUser(username, false, req.session.openvpnToken); // Unblock user
 
     // Cancel any scheduled block job (though there shouldn't be one if it was blocked)
     cancelUserBlocking(username);
